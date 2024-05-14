@@ -1,0 +1,16 @@
+[package]
+name = "wave_function_collapser"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+gamezap = {git = "https://github.com/GameHunter101/gamezap-lib" }
+wgpu = "0.17.0"
+tokio = {version = "1.35.1", features = ["full"]}
+
+[dependencies.sdl2]
+version = "0.36"
+default-features = false
+features = ["raw-window-handle"]
