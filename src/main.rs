@@ -1,4 +1,9 @@
+use components::canvas_component::CanvasComponent;
 use gamezap::{ecs::scene::Scene, GameZap};
+
+pub mod components {
+    pub mod canvas_component;
+}
 
 #[tokio::main]
 async fn main() {
@@ -31,6 +36,10 @@ async fn main() {
         .await;
 
     let mut scene = Scene::default();
+
+    let canvas_component = CanvasComponent::default();
+
+    let _canvas_entity = scene.create_entity(0, true, vec![Box::new(canvas_component)], None);
 
     engine.create_scene(scene);
 

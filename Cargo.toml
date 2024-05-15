@@ -9,6 +9,9 @@ edition = "2021"
 gamezap = {git = "https://github.com/GameHunter101/gamezap-lib" }
 wgpu = "0.17.0"
 tokio = {version = "1.35.1", features = ["full"]}
+imgui-wgpu = "0.24.0"
+bytemuck = { version = "1.13.1", features = ["derive"] }
+rfd = "0.14.1"
 
 [dependencies.sdl2]
 version = "0.36"
