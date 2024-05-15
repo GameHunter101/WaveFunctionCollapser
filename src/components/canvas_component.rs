@@ -14,21 +14,23 @@ use gamezap::{
     texture::Texture,
     EngineDetails, EngineSystems,
 };
+
 use rfd::FileDialog;
 use wgpu::{Device, Queue};
 
 #[repr(C)]
-#[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct VertexData {
-    position: [u16; 2],
-    color: [u8; 3],
-    pixel_size: u8,
+#[derive(Debug, Clone)]
+struct ImageData {
+    path: String,
+    id: imgui::TextureId,
+    size: [f32; 2],
 }
 
 #[derive(Debug, Clone)]
 pub struct CanvasComponent {
     parent: EntityId,
     id: ComponentId,
+    loaded_images: Vec<ImageData>,
 }
 
 impl Default for CanvasComponent {
@@ -36,6 +38,7 @@ impl Default for CanvasComponent {
         CanvasComponent {
             parent: EntityId::MAX,
             id: (EntityId::MAX, TypeId::of::<Self>(), 0),
+            loaded_images: Vec::new(),
         }
     }
 }
@@ -54,8 +57,8 @@ impl ComponentSystem for CanvasComponent {
 
     fn update(
         &mut self,
-        _device: Arc<Device>,
-        _queue: Arc<Queue>,
+        device: Arc<Device>,
+        queue: Arc<Queue>,
         _component_map: &mut AllComponents,
         _engine_details: Rc<Mutex<EngineDetails>>,
         engine_systems: Rc<Mutex<EngineSystems>>,
@@ -77,10 +80,46 @@ impl ComponentSystem for CanvasComponent {
 
             let ui = imgui_context.new_frame();
 
-            /* ui.window(".").build(|| {
-            }) */
+            for (i, ImageData { path: _, id, size }) in self.loaded_images.iter().enumerate() {
+                ui.window(format!("Image {i}"))
+                    .position([100.0 * (i as f32 + 1.0), 100.0], imgui::Condition::Always)
+                    .build(|| {
+                        /* let image = Texture::load_ui_image(
+                            &device,
+                            &queue,
+                            &mut ui_manager.imgui_renderer.lock().unwrap(),
+                            path.clone(),
+                        ); */
+                        let aspect_ratio = size[1] / size[0];
+                        imgui::Image::new(*id, [100.0, 100.0 * aspect_ratio]).build(ui);
+                    });
+            }
 
-            let files = FileDialog::new().pick_file();
+            ui.window("image selector")
+                .title_bar(false)
+                // .draw_background(false)
+                .resizable(false)
+                .movable(false)
+                .always_auto_resize(true)
+                .position([100.0, 300.0], imgui::Condition::Always)
+                .build(|| {
+                    if ui.button("Load image") {
+                        let file = FileDialog::new().pick_file();
+                        if let Some(path) = file {
+                            let (id, size) = Texture::load_ui_image(
+                                &device,
+                                &queue,
+                                &mut ui_manager.imgui_renderer.lock().unwrap(),
+                                (*path.to_str().unwrap()).to_owned(),
+                            );
+                            self.loaded_images.push(ImageData {
+                                path: path.to_str().unwrap().to_owned(),
+                                id,
+                                size,
+                            })
+                        }
+                    }
+                });
         }
     }
 
