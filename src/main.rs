@@ -1,8 +1,11 @@
-use components::canvas_component::CanvasComponent;
+use components::{
+    image_canvas_component::ImageCanvasComponent, tile_creation_component::TileCreationComponent,
+};
 use gamezap::{ecs::scene::Scene, GameZap};
 
 pub mod components {
-    pub mod canvas_component;
+    pub mod image_canvas_component;
+    pub mod tile_creation_component;
 }
 
 #[tokio::main]
@@ -37,9 +40,14 @@ async fn main() {
 
     let mut scene = Scene::default();
 
-    let canvas_component = CanvasComponent::default();
+    let tile_creation_component = TileCreationComponent::new(scene.get_concept_manager());
 
-    let _canvas_entity = scene.create_entity(0, true, vec![Box::new(canvas_component)], None);
+    let _tile_creation_entity =
+        scene.create_entity(0, true, vec![Box::new(tile_creation_component)], None);
+
+    let canvas_component = ImageCanvasComponent::default();
+
+    let _canvas_entity = scene.create_entity(1, false, vec![Box::new(canvas_component)], None);
 
     engine.create_scene(scene);
 
