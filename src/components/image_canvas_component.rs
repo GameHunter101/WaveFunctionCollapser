@@ -1,6 +1,5 @@
 use std::{
     any::TypeId,
-    collections::{HashMap, HashSet},
     rc::Rc,
     sync::{Arc, Mutex},
     time::Instant,
@@ -32,6 +31,8 @@ struct PossibleConnections {
 }
 
 impl PossibleConnections {
+    // Count all possible states of a location
+    // Quantifying entropy
     fn total_len(&self) -> usize {
         self.north_connections.len()
             + self.south_connections.len()
@@ -39,51 +40,7 @@ impl PossibleConnections {
             + self.west_connections.len()
     }
 
-    pub fn guaranteed_connections<'a>(
-        &'a self,
-        tiles: &'a [TileData],
-    ) -> HashMap<&'a TileData, usize> {
-        let mut guaranteed = HashMap::new();
-        let mut indices = Vec::new();
-        if self.north_connections.len() == 1 {
-            let index = tiles
-                .iter()
-                .position(|tile| tile.image_index == self.north_connections[0].0)
-                .unwrap();
-            indices.push(index);
-        }
-        if self.south_connections.len() == 1 {
-            let index = tiles
-                .iter()
-                .position(|tile| tile.image_index == self.south_connections[0].0)
-                .unwrap();
-            indices.push(index);
-        }
-        if self.east_connections.len() == 1 {
-            let index = tiles
-                .iter()
-                .position(|tile| tile.image_index == self.east_connections[0].0)
-                .unwrap();
-            indices.push(index);
-        }
-        if self.west_connections.len() == 1 {
-            let index = tiles
-                .iter()
-                .position(|tile| tile.image_index == self.west_connections[0].0)
-                .unwrap();
-            indices.push(index);
-        }
-        for index in indices {
-            let tile = &tiles[index];
-            if let Some(val) = guaranteed.get_mut(tile) {
-                *val += 1;
-            } else {
-                guaranteed.insert(&tiles[index], 1);
-            }
-        }
-        guaranteed
-    }
-
+    // Randomly chooses a tile from the possible states of the location
     fn random_tile<'a>(&'a self, tiles: &'a [TileData]) -> &'a TileData {
         if self == &Self::default() {
             return &tiles[0];
@@ -122,6 +79,8 @@ pub struct ImageCanvasComponent {
 }
 
 impl ImageCanvasComponent {
+    // Removes all of the duplicate elements from a slice
+    // (This could be done with a hash set but I dont want to do that)
     fn remove_dupes(arr: &[TileConnection]) -> Vec<TileConnection> {
         let mut vec = Vec::with_capacity(arr.len());
         for elem in arr {
@@ -133,6 +92,7 @@ impl ImageCanvasComponent {
         vec
     }
 
+    // Calculates the initial entropy of the board
     fn fill_representation_array(&mut self, tiles: &[TileData]) {
         let all_north_connections = Self::remove_dupes(
             &tiles
@@ -166,37 +126,21 @@ impl ImageCanvasComponent {
                     valid_connections
                         .north_connections
                         .append(&mut all_north_connections.clone());
-                } else {
-                    /* valid_connections
-                    .north_connections
-                    .push((0, Direction::South)); */
                 }
                 if row_index != 9 {
                     valid_connections
                         .south_connections
                         .append(&mut all_south_connections.clone());
-                } else {
-                    /* valid_connections
-                    .south_connections
-                    .push((0, Direction::North)); */
                 }
                 if col_index != 0 {
                     valid_connections
                         .west_connections
                         .append(&mut all_west_connections.clone());
-                } else {
-                    /* valid_connections
-                    .west_connections
-                    .push((0, Direction::East)); */
                 }
                 if col_index != 9 {
                     valid_connections
                         .east_connections
                         .append(&mut all_east_connections.clone());
-                } else {
-                    /* valid_connections
-                    .east_connections
-                    .push((0, Direction::West)); */
                 }
 
                 *slot = valid_connections;
@@ -204,19 +148,12 @@ impl ImageCanvasComponent {
         }
     }
 
-    fn append_hash_set(set: &mut HashSet<TileConnection>, slice: &[TileConnection]) {
-        for con in slice {
-            set.insert(*con);
-        }
-    }
-
+    // Calculates the tile with the lowest entropy (lowest amount of possible states)
     fn get_lowest_entropy(&self) -> Option<(usize, usize)> {
         let mut rng = rand::thread_rng();
-        let x_f: f32 = rng.gen();
-        let y_f: f32 = rng.gen();
 
-        let x = (x_f * 10.0) as usize;
-        let y = (y_f * 10.0) as usize;
+        let x: usize = rng.gen_range(0..10);
+        let y: usize = rng.gen_range(0..10);
 
         let mut lowest_position = (x, y);
         let mut lowest_val = &self.canvas_connections[x][y];
@@ -230,13 +167,13 @@ impl ImageCanvasComponent {
                 }
             }
         }
-        // println!("{lowest_position:?}");
         if lowest_position == (x, y) && self.canvas_representation[x][y].is_some() {
             return None;
         }
         Some(lowest_position)
     }
 
+    // Checks to see if vec2 shares any elements of vec1
     fn do_tile_arrs_overlap(vec1: &[TileConnection], vec2: &[TileConnection]) -> bool {
         for elem in vec1 {
             if vec2.contains(elem) {
@@ -246,23 +183,7 @@ impl ImageCanvasComponent {
         false
     }
 
-    fn hashmap_max<'a>(map: &'a HashMap<&'a TileData, usize>) -> (&'a TileData, &'a usize) {
-        let mut max_index = 0;
-        let mut max_val = map.values().collect::<Vec<_>>()[0];
-
-        for (i, val) in map.values().enumerate() {
-            if val > max_val {
-                max_index = i;
-                max_val = val;
-            }
-        }
-
-        let key = *map.keys().collect::<Vec<_>>()[max_index];
-        let val = map.values().collect::<Vec<_>>()[max_index];
-
-        (key, val)
-    }
-
+    // Calculates how well a tile matches entropy at a position
     fn tile_confidence(tile: &TileData, connections: &PossibleConnections) -> f32 {
         let mut confidence = 0.0;
         if Self::do_tile_arrs_overlap(&tile.north_valid_tiles, &connections.north_connections) {
@@ -281,6 +202,7 @@ impl ImageCanvasComponent {
         confidence
     }
 
+    // Reads surrounding tiles and converts the entropy into a set of possible states
     fn get_possible_tiles(&self, pos: (usize, usize)) -> Vec<TileData> {
         let mut tiles = Vec::new();
         if pos.0 > 0 {
@@ -319,6 +241,8 @@ impl ImageCanvasComponent {
         tiles
     }
 
+    // Collapses a single tile into a single tile
+    // Reduces the possible states (entropy) of surrounding tiles
     fn collapse_tile(
         &mut self,
         tile_connections: &PossibleConnections,
@@ -342,10 +266,6 @@ impl ImageCanvasComponent {
             }
 
             most_confident_tile.clone()
-
-            /* let mut rng = rand::thread_rng();
-            let index: usize = rng.gen_range(0..possible_tiles.len());
-            possible_tiles[index].clone() */
         };
 
         if pos.0 > 0 {
@@ -366,20 +286,6 @@ impl ImageCanvasComponent {
         }
 
         most_likely_tile
-    }
-
-    fn print_entropy(&self) {
-        for (r_i, row) in self.canvas_connections.iter().enumerate() {
-            for (c_i, tile) in row.iter().enumerate() {
-                if self.canvas_representation[r_i][c_i].is_none() {
-                    print!("{} ", tile.total_len());
-                } else {
-                    print!("__ ");
-                }
-            }
-            println!();
-        }
-        println!();
     }
 }
 
@@ -423,6 +329,8 @@ impl Default for ImageCanvasComponent {
 }
 
 impl ComponentSystem for ImageCanvasComponent {
+    // Main update method
+    // Called every frame
     fn update(
         &mut self,
         _device: Arc<Device>,
@@ -447,22 +355,22 @@ impl ComponentSystem for ImageCanvasComponent {
             self.current_tile_set = tiles;
         }
         if !self.current_tile_set.is_empty()
-        // && (Instant::now() - self.last_update).as_millis() > 500
+            && (Instant::now() - self.last_update).as_millis() > 100
         {
             let lowest_entropy_pos = self.get_lowest_entropy();
             if let Some(lowest_entropy_pos) = lowest_entropy_pos {
                 let lowest_entropy_tile =
                     self.canvas_connections[lowest_entropy_pos.0][lowest_entropy_pos.1].clone();
                 let result = self.collapse_tile(&lowest_entropy_tile, lowest_entropy_pos);
-                // dbg!(&lowest_entropy_pos, &result.image_index);
                 self.canvas_representation[lowest_entropy_pos.0][lowest_entropy_pos.1] =
                     Some(result);
-                // self.last_update = Instant::now();
-                self.print_entropy();
+                self.last_update = Instant::now();
             }
         }
     }
 
+    // Main UI draw method
+    // Called every frame
     fn ui_draw(
         &mut self,
         _device: Arc<Device>,
@@ -482,13 +390,6 @@ impl ComponentSystem for ImageCanvasComponent {
             )
             .unwrap()
             .clone();
-        /* let tiles = concept_manager
-        .get_concept::<Vec<TileData>>(
-            (0, TypeId::of::<TileCreationComponent>(), 0),
-            "loaded_tiles".to_string(),
-        )
-        .unwrap()
-        .clone(); */
 
         if !images.is_empty() {
             let style = ui_frame.push_style_var(imgui::StyleVar::CellPadding([0.0, 0.0]));
@@ -507,9 +408,6 @@ impl ComponentSystem for ImageCanvasComponent {
                         for tile in row {
                             ui_frame.table_next_column();
                             let image_index = if let Some(tile) = tile {
-                                // println!("{tile:?}");
-                                // tiles.iter().position(|i| i == tile).unwrap()
-                                // 1
                                 tile.image_index
                             } else {
                                 0
@@ -517,14 +415,6 @@ impl ComponentSystem for ImageCanvasComponent {
                             imgui::Image::new(images[image_index].id, [50.0, 50.0]).build(ui_frame);
                         }
                     }
-                    /* for i in 0..100 {
-                        ui_frame.table_next_column();
-                        if i % 10 == 0 {
-                            ui_frame.table_next_row();
-                        }
-                        imgui::Image::new(images[i % images.len()].id, [50.0, 50.0])
-                            .build(ui_frame);
-                    } */
                     image_table.end();
                 });
             style.pop();

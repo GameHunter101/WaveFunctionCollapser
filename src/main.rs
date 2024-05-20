@@ -14,7 +14,7 @@ async fn main() {
     let video_subsystem = sdl_context.video().unwrap();
     let event_pump = sdl_context.event_pump().unwrap();
     let application_title = "Wave Function Collapser";
-    let window_size = (800, 600);
+    let window_size = (1000, 600);
     let window = video_subsystem
         .window(application_title, window_size.0, window_size.1)
         .resizable()

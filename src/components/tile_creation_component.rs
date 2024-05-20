@@ -1,6 +1,6 @@
 use std::{
     any::{Any, TypeId},
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     rc::Rc,
     sync::{Arc, Mutex},
 };
@@ -18,21 +18,6 @@ use gamezap::{
 
 use rfd::FileDialog;
 use wgpu::{Device, Queue};
-
-macro_rules! hash_set {
-    ($($element:expr),+) => {
-        {
-            let mut set = HashSet::new();
-            $(
-                set.insert($element);
-            )*
-            set
-        }
-    };
-    () => {
-        HashSet::new()
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct ImageData {
@@ -152,6 +137,8 @@ impl TileCreationComponent {
 }
 
 impl ComponentSystem for TileCreationComponent {
+    // Registers all of the component concepts
+    // This makes it possible to share data between components
     fn register_component(
         &mut self,
         concept_manager: Rc<Mutex<ConceptManager>>,
@@ -165,6 +152,8 @@ impl ComponentSystem for TileCreationComponent {
             .register_component_concepts(self.id, data);
     }
 
+    // Main update method
+    // This is called every frame
     fn update(
         &mut self,
         _device: Arc<Device>,
@@ -184,6 +173,10 @@ impl ComponentSystem for TileCreationComponent {
             && self.run_algorithm;
     }
 
+    // Main UI draw method
+    // Called every frame
+    // This can definitely be split up into functions
+    // (I don't have time)
     fn ui_draw(
         &mut self,
         device: Arc<Device>,
@@ -298,10 +291,10 @@ impl ComponentSystem for TileCreationComponent {
                         .always_auto_resize(true)
                         .position([450.0, 180.0], imgui::Condition::Always)
                         .build(|| {
-                            // if ui_frame.button("Load image") {
-                                // let file = FileDialog::new().pick_files();
-                                // if let Some(paths) = file {
-                                    /* for path in paths {
+                            if ui_frame.button("Load image") {
+                                let file = FileDialog::new().pick_files();
+                                if let Some(paths) = file {
+                                    for path in paths {
                                         let (id, size) = Texture::load_ui_image(
                                             &device,
                                             &queue,
@@ -313,134 +306,10 @@ impl ComponentSystem for TileCreationComponent {
                                             id,
                                             size,
                                         ));
-                                        tiles.push(TileData::new(images.len()-1));
-                                    } */
-
-                            if images.is_empty() {
-                                let base = "C:\\Users\\liors\\Documents\\Coding projects\\Rust\\wave_function_collapser\\example tiles\\";
-                                let paths = [
-                                    "blank.png",
-                                    "corner_bottom_left.png",
-                                    "corner_bottom_right.png",
-                                    "corner_top_left.png",
-                                    "corner_top_right.png",
-                                    "four_way.png",
-                                    "horizontal.png",
-                                    "T.png",
-                                    "T_left.png",
-                                    "T_right.png",
-                                    "T_up.png",
-                                    "vertical.png"
-                                ];
-
-                                for path in paths {
-                                    let (id, size) = Texture::load_ui_image(
-                                        &device,
-                                        &queue,
-                                        &mut ui_manager.imgui_renderer.lock().unwrap(),
-                                        format!("{base}{path}"),
-                                    );
-                                    images.push(ImageData::new(
-                                        format!("{base}{path}"),
-                                        id,
-                                        size,
-                                    ));
+                                        tiles.push(TileData::new(images.len() - 1));
+                                    }
                                 }
-                                /* let blank_south =  vec![ (2, Direction::South), (3, Direction::South)];
-                                let blank_north =  vec![ (0, Direction::North), (1, Direction::North)];
-                                let blank_west =   vec![(1, Direction::West), (3, Direction::West)];
-                                let blank_east =   vec![(0, Direction::East), (2, Direction::East)];
-
-                                let solid_south = vec![(0, Direction::South), (1, Direction::South)];
-                                let solid_north = vec![(2, Direction::North), (3, Direction::North)];
-                                let solid_west =  vec![(0, Direction::West), (2, Direction::West)];
-                                let solid_east =  vec![(1, Direction::East), (3, Direction::East)]; */
-
-                                let blank_south =  vec![(0, Direction::South), (3, Direction::South), (4, Direction::South), (6, Direction::South), (10, Direction::South)];
-                                let blank_north =  vec![(0, Direction::North), (1, Direction::North), (2, Direction::North), (6, Direction::North), (7, Direction::North)];
-                                let blank_west =   vec![(0, Direction::West), (2, Direction::West), (4, Direction::West), (9, Direction::West), (11, Direction::West)];
-                                let blank_east =   vec![(0, Direction::East), (1, Direction::East), (3, Direction::East), (9, Direction::East), (10, Direction::East)];
-
-                                let solid_south = vec![(1, Direction::South), (2, Direction::South), (5, Direction::South), (7, Direction::South), (8, Direction::South), (9, Direction::South), (11, Direction::South)];
-                                let solid_north = vec![(3, Direction::North), (4, Direction::North), (5, Direction::North), (8, Direction::North), (9, Direction::North), (10, Direction::North), (11, Direction::North)];
-                                let solid_west =  vec![(1, Direction::West), (3, Direction::West), (5, Direction::West), (6, Direction::West), (7, Direction::West), (8, Direction::West), (10, Direction::West), (11, Direction::West)];
-                                let solid_east =  vec![(2, Direction::East), (4, Direction::East), (5, Direction::East), (6, Direction::East), (7, Direction::East), (9, Direction::East), (10, Direction::East), (11, Direction::East)];
-
-                                tiles.push(TileData { image_index: 0,
-                                    north_valid_tiles: blank_south.clone(),
-                                    south_valid_tiles: blank_north.clone(),
-                                    east_valid_tiles: blank_west.clone(),
-                                    west_valid_tiles: blank_east.clone(),
-                                });
-                                tiles.push(TileData { image_index: 1,
-                                    north_valid_tiles: blank_south.clone(),
-                                    south_valid_tiles: solid_north.clone(),
-                                    east_valid_tiles: blank_west.clone(),
-                                    west_valid_tiles: solid_east.clone(),
-                                });
-                                tiles.push(TileData { image_index: 2,
-                                    north_valid_tiles: blank_south.clone(),
-                                    south_valid_tiles: solid_north.clone(),
-                                    east_valid_tiles: solid_west.clone(),
-                                    west_valid_tiles: blank_east.clone(),
-                                });
-                                tiles.push(TileData { image_index: 3,
-                                    north_valid_tiles: solid_south.clone(),
-                                    south_valid_tiles: blank_north.clone(),
-                                    east_valid_tiles: blank_west.clone(),
-                                    west_valid_tiles: solid_east.clone(),
-                                });
-                                tiles.push(TileData { image_index: 4,
-                                    north_valid_tiles: solid_south.clone(),
-                                    south_valid_tiles: blank_north.clone(),
-                                    east_valid_tiles: solid_west.clone(),
-                                    west_valid_tiles: blank_east.clone(),
-                                });
-                                tiles.push(TileData { image_index: 5,
-                                    north_valid_tiles: solid_south.clone(),
-                                    south_valid_tiles: solid_north.clone(),
-                                    east_valid_tiles: solid_west.clone(),
-                                    west_valid_tiles: solid_east.clone(),
-                                });
-                                tiles.push(TileData { image_index: 6,
-                                    north_valid_tiles: blank_south.clone(),
-                                    south_valid_tiles: blank_north.clone(),
-                                    east_valid_tiles: solid_west.clone(),
-                                    west_valid_tiles: solid_east.clone(),
-                                });
-                                tiles.push(TileData { image_index: 7,
-                                    north_valid_tiles: blank_south,
-                                    south_valid_tiles: solid_north.clone(),
-                                    east_valid_tiles: solid_west.clone(),
-                                    west_valid_tiles: solid_east.clone(),
-                                });
-                                tiles.push(TileData { image_index: 8,
-                                    north_valid_tiles: solid_south.clone(),
-                                    south_valid_tiles: solid_north.clone(),
-                                    east_valid_tiles: blank_west.clone(),
-                                    west_valid_tiles: solid_east.clone(),
-                                });
-                                tiles.push(TileData { image_index: 9,
-                                    north_valid_tiles: solid_south.clone(),
-                                    south_valid_tiles: solid_north.clone(),
-                                    east_valid_tiles: solid_west.clone(),
-                                    west_valid_tiles: blank_east.clone(),
-                                });
-                                tiles.push(TileData { image_index: 10,
-                                    north_valid_tiles: solid_south.clone(),
-                                    south_valid_tiles: blank_north,
-                                    east_valid_tiles: solid_west,
-                                    west_valid_tiles: solid_east,
-                                });
-                                tiles.push(TileData { image_index: 11,
-                                    north_valid_tiles: solid_south,
-                                    south_valid_tiles: solid_north,
-                                    east_valid_tiles: blank_west,
-                                    west_valid_tiles: blank_east,
-                                });
                             }
-                                // }
-                            // }
                             ui_frame.checkbox("Run algorithm", &mut self.run_algorithm);
                         });
                     button_style.pop();
