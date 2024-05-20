@@ -216,6 +216,7 @@ impl ComponentSystem for TileCreationComponent {
                 .focused(false)
                 .collapsible(false)
                 .build(|| {
+                    // Displays the imported tiles in a scrollable window
                     let style = ui_frame.push_style_var(imgui::StyleVar::WindowPadding([0.0, 0.0]));
                     let button_style = ui_frame
                         .push_style_color(imgui::StyleColor::ButtonHovered, [0.5, 0.5, 0.5, 0.5]);
@@ -254,6 +255,8 @@ impl ComponentSystem for TileCreationComponent {
                         }
                         ui_frame.text(text);
                         ui_frame.separator();
+
+                        // Button that marks the tile for modification, opens up the modification window
                         if ui_frame.image_button(format!("Image button {i}"), *id, [100.0, 100.0]) {
                             self.tile_being_modified = Some(i);
                         }
@@ -271,6 +274,7 @@ impl ComponentSystem for TileCreationComponent {
                             ]);
                         }
 
+                        // Button that deletes the current image and its corresponding tile
                         if ui_frame.button(format!("Remove image {i}")) {
                             images.remove(i);
                             tiles.remove(i);
@@ -282,6 +286,8 @@ impl ComponentSystem for TileCreationComponent {
 
                     ui_frame.table_next_row();
 
+                    // Button that opens a file dialogue for image selection
+                    // The program will panic if a non-square image is selected
                     ui_frame
                         .window("image selector")
                         .title_bar(false)
@@ -310,6 +316,7 @@ impl ComponentSystem for TileCreationComponent {
                                     }
                                 }
                             }
+
                             ui_frame.checkbox("Run algorithm", &mut self.run_algorithm);
                         });
                     button_style.pop();
@@ -317,6 +324,7 @@ impl ComponentSystem for TileCreationComponent {
                     image_table.end();
                 });
 
+            // Image modification window
             if let Some(tile_index) = self.tile_being_modified {
                 let ImageData { id, size, .. } = images[tile_index];
 
@@ -339,6 +347,7 @@ impl ComponentSystem for TileCreationComponent {
                             imgui::Image::new(id, [100.0, 100.0 * aspect_ratio]).build(ui_frame);
                             ui_frame.table_next_column();
                             if let Some(directions_bar) = ui_frame.tab_bar("Tile directions") {
+                                // Tab bar for different image directions
                                 for dir in 0..4 {
                                     let mut temp_vec = Vec::new();
                                     let tab_data = match dir {
@@ -372,6 +381,7 @@ impl ComponentSystem for TileCreationComponent {
                                             bar.end();
                                         }
 
+                                        // User input for modifying tile data
                                         if let Some(table) = ui_frame.begin_table_with_flags(
                                             "modification table",
                                             3,
@@ -393,7 +403,6 @@ impl ComponentSystem for TileCreationComponent {
                                                 &mut self.direction_selected,
                                                 &["North", "South", "East", "West"],
                                             );
-                                            // ui.table_next_row();
                                             ui_frame.new_line();
 
                                             let tile_being_added = (
@@ -420,6 +429,8 @@ impl ComponentSystem for TileCreationComponent {
                         }
                     });
             }
+
+            // Assigns the modified data to its corresponding concepts
             *concept_manager
                 .get_concept_mut::<Vec<ImageData>>(self.id, "loaded_images".to_string())
                 .unwrap() = images;

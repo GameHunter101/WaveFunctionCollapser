@@ -38,13 +38,17 @@ async fn main() {
         .build()
         .await;
 
+    // Setting up the scene
     let mut scene = Scene::default();
 
+    // Creating user input component
     let tile_creation_component = TileCreationComponent::new(scene.get_concept_manager());
 
     let _tile_creation_entity =
         scene.create_entity(0, true, vec![Box::new(tile_creation_component)], None);
 
+    // Creating canvas component
+    // This is responsible for running the algorithm
     let canvas_component = ImageCanvasComponent::default();
 
     let _canvas_entity = scene.create_entity(1, false, vec![Box::new(canvas_component)], None);

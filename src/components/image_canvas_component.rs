@@ -253,6 +253,7 @@ impl ImageCanvasComponent {
         let most_likely_tile = if possible_tiles.is_empty() {
             tile_connections.random_tile(&self.current_tile_set).clone()
         } else {
+            // Calculates which tile has the highest confidence
             let mut most_confident_tile = &possible_tiles[0];
             let mut highest_confidence =
                 Self::tile_confidence(most_confident_tile, tile_connections);
@@ -268,6 +269,7 @@ impl ImageCanvasComponent {
             most_confident_tile.clone()
         };
 
+        // Collapses all of the states for the adjacent tiles
         if pos.0 > 0 {
             let vec = vec![(most_likely_tile.image_index, Direction::North)];
             self.canvas_connections[pos.0 - 1][pos.1].south_connections = vec;
@@ -350,10 +352,14 @@ impl ComponentSystem for ImageCanvasComponent {
             )
             .unwrap()
             .clone();
+
         if tiles != self.current_tile_set {
             self.fill_representation_array(&tiles);
             self.current_tile_set = tiles;
         }
+
+        // Main algorithm loop
+        // Delay added to help visualize the collapse
         if !self.current_tile_set.is_empty()
             && (Instant::now() - self.last_update).as_millis() > 100
         {
@@ -391,6 +397,7 @@ impl ComponentSystem for ImageCanvasComponent {
             .unwrap()
             .clone();
 
+        // Canvas for the tiles
         if !images.is_empty() {
             let style = ui_frame.push_style_var(imgui::StyleVar::CellPadding([0.0, 0.0]));
             ui_frame
@@ -406,10 +413,12 @@ impl ComponentSystem for ImageCanvasComponent {
                     for row in &self.canvas_representation {
                         ui_frame.table_next_row();
                         for tile in row {
+                            // Actual data from collapse
                             ui_frame.table_next_column();
                             let image_index = if let Some(tile) = tile {
                                 tile.image_index
                             } else {
+                                // Fallback value for tiles not yet collapsed
                                 0
                             };
                             imgui::Image::new(images[image_index].id, [50.0, 50.0]).build(ui_frame);
